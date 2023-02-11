@@ -14,7 +14,7 @@ classdef AABB
 
         function obj = AABB(points,pose)
             if nargin == 2
-                points = pose * [points ones(size(points,1),1)];
+                points = [points ones(size(points,1),1)] * pose';
             end
             obj.minX = min(points(:,1));
             obj.maxX = max(points(:,1));

@@ -1,25 +1,17 @@
-classdef Model3D
+classdef Model3D < handle
 % 3D models to pack
     
     properties
         Vertices
         Triangles
-        Pose = eye(4)
-        ConvexHulls = collisionMesh([0 0 0])
-        BoundingBox
+        Pose = eye(4)   % homogeneous matrix
+        ConvexHulls = collisionMesh([0 0 0])    % object is decomposed into convex collision meshes
+        BoundingBox     % axis-aligned bounding box
     end
     
     methods
 
         function obj = Model3D(arg1,arg2)
-%             switch nargin
-%                 case 1
-%                     args{1} = arg1;
-%                 case 2
-%                     args{1} = arg1;
-%                     args{2} = arg2;
-%             end
-%             obj@TriMesh3D(args{:});
             switch nargin
                 case 1  % input is filename
                     [obj.Vertices,obj.Triangles] = readObj(arg1);
@@ -27,23 +19,24 @@ classdef Model3D
                     obj.Vertices = arg1;
                     obj.Triangles = arg2;
             end
-            
-            obj.ComputeVHACD;
+            barycenter = mean(obj.Vertices);
+            obj.Vertices = obj.Vertices - barycenter;   % move barycenter to 0 to simplify rotation
             obj.BoundingBox = AABB(obj.Vertices);
         end
 
         function cp = copy(obj)
             cp = Model3D(obj.Vertices,obj.Triangles);
             cp.Pose = obj.Pose;
-            cp.convexHulls(1:size(obj.ConvexHulls)) = collisionMesh([0 0 0]);
+            cp.ConvexHulls(1:size(obj.ConvexHulls)) = collisionMesh([0 0 0]);
             for i = 1:length(obj.ConvexHulls)
-                cp.convexHulls(i) = ...
+                cp.ConvexHulls(i) = ...
                     collisionMesh(obj.ConvexHulls(i).Vertices);
             end
-            cp.aabb = AABB(cp.Vertices,cp.Pose);
+            cp.BoundingBox = AABB(cp.Vertices,cp.Pose);
         end
 
         function ComputeVHACD(obj)
+            % compute convex decomposition using C++ V-HACD library
             [pos,offset] = mexVHACD(obj.Vertices,obj.Triangles - 1);
             obj.ConvexHulls(1:(size(offset,2) - 1)) = collisionMesh([0 0 0]);
             for i = 1:(size(offset,2) - 1)
@@ -64,48 +57,28 @@ classdef Model3D
         end
 
         function setPose(obj,pose)
+            % directly change the object's pose
             obj.Pose = pose;
-            for i = 1:length(obj.ConvexHulls)
-                obj.ConvexHulls(i).Pose = obj.Pose;
-            end
-        end
-
-        function affineTrsfm(obj,trans)
-            obj.Pose = trans * obj.Pose;
             for i = 1:length(obj.ConvexHulls)
                 obj.ConvexHulls(i).Pose = obj.Pose;
             end
             obj.BoundingBox = AABB(obj.Vertices,obj.Pose);
         end
 
+        function affineTrsfm(obj,aftMatrix)
+            % perform an affine transform to the object
+            obj.setPose(aftMatrix * obj.Pose);
+        end
+
         function move(obj,deltaR)
-            deltaX = deltaR(1);
-            deltaY = deltaR(2);
-            deltaZ = deltaR(3);
-            obj.affineTrsfm([1 0 0 deltaX; ...
-                             0 1 0 deltaY; ...
-                             0 0 1 deltaZ; ...
-                             0 0 0 1]);
+            obj.affineTrsfm([1 0 0 deltaR(1); ...
+                             0 1 0 deltaR(2); ...
+                             0 0 1 deltaR(3); ...
+                             0 0 0 1        ]);
         end
 
         function rotate(obj,deltaTheta,dim)
-%             switch(dim)
-%                 case 1
-%                     rot = [1 0               0                0; ...
-%                            0 cos(deltaTheta) -sin(deltaTheta) 0; ...
-%                            0 sin(deltaTheta) cos(deltaTheta)  0; ...
-%                            0 0               0                1];
-%                 case 2
-%                     rot = [cos(deltaTheta)  0 sin(deltaTheta) 0; ...
-%                            0                1 0               0; ...
-%                            -sin(deltaTheta) 0 cos(deltaTheta) 0; ...
-%                            0                0 0               1];
-%                 case 3
-%                     rot = [cos(deltaTheta) -sin(deltaTheta) 0 0; ...
-%                            sin(deltaTheta) cos(deltaTheta)  0 0; ...
-%                            0               0                1 0; ...
-%                            0               0                0 1];
-%             end
+            % rotate the object around its barycenter
             switch(dim)
                 case 1
                     rotm = rotx(deltaTheta);
@@ -114,15 +87,17 @@ classdef Model3D
                 case 3
                     rotm = rotz(deltaTheta);
             end
-            obj.affineTrsfm(rotm2tform(rotm));
+            newPose = obj.Pose;
+            newPose(1:3,1:3) = rotm * newPose(1:3,1:3);
+            obj.setPose(newPose);
         end
 
         function [collisionStatus,minDist] = detectCollision(obj1,obj2)
-            [~,minDist] = checkCollision(obj1.ConvexHulls(1),obj2.convexHulls(1));
+            [~,minDist] = checkCollision(obj1.ConvexHulls(1),obj2.ConvexHulls(1));
             for i = 1:length(obj1.ConvexHulls)
-                for j = i:length(obj2.convexHulls)
+                for j = i:length(obj2.ConvexHulls)
                     [collisionStatus,spdist] = ...
-                        checkCollision(obj1.ConvexHulls(i),obj2.convexHulls(j));
+                        checkCollision(obj1.ConvexHulls(i),obj2.ConvexHulls(j));
                     if collisionStatus
                         minDist = 0;
                         return

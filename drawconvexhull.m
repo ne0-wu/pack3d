@@ -1,5 +1,9 @@
 figure;
 
+[V,T] = readObj('meshes/bunny.obj');
+
+[posPoints,offsetPoints,vidTriangles,offsetTriangles] = mexVHACD(V,T-1);
+
 for i = 1:(size(offsetPoints,2) - 1)
     x = posPoints((offsetPoints(i) + 1):offsetPoints(i + 1),1);
     y = posPoints((offsetPoints(i) + 1):offsetPoints(i + 1),2);
