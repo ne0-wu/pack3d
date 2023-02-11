@@ -12,3 +12,14 @@ close all
 % a.drawConvexHulls(fig);
 % hold on
 % b.drawConvexHulls(fig);
+
+n = 10;
+pts = zeros(n,3);
+for k = 1:n
+    ph = 2*pi*rand(1);
+    th = pi*rand(1);
+    pts(k,:) = [cos(th)*sin(ph) sin(th)*sin(ph) cos(ph)];
+end
+
+aabb = AABB(pts)
+aabb2 = AABB(pts)
