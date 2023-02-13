@@ -14,8 +14,6 @@ for i = 1:(size(offsetPoints,2) - 1)
     trimesh(T,x,y,z,'EdgeColor',[0 0 0],'FaceColor',randColor)
     hold on
     drawnow;
-    
-%     pause(1);
 end
 
 axis equal

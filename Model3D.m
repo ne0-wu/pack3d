@@ -13,6 +13,15 @@ classdef Model3D < handle
 
         function obj = Model3D(arg1,arg2)
             switch nargin
+                case 0
+                    obj.Vertices = [0 0 0;
+                                    1 0 0;
+                                    0 1 0;
+                                    0 0 1];
+                    obj.Triangles = [1 2 3;
+                                     1 3 4;
+                                     1 4 2;
+                                     4 3 2];
                 case 1  % input is filename
                     [obj.Vertices,obj.Triangles] = readObj(arg1);
                 case 2  % input is vertices and triangles
@@ -45,6 +54,15 @@ classdef Model3D < handle
             end
         end
 
+        function fig = draw(obj,fig)
+            if nargin == 1
+                fig = figure;
+            end
+            v = [obj.Vertices ones(size(obj.Vertices,1),1)] * obj.Pose';
+            trimesh(obj.Triangles,v(:,1),v(:,2),v(:,3));
+            axis equal
+        end
+
         function fig = drawConvexHulls(obj,fig)
             if nargin == 1
                 fig = figure;
@@ -53,6 +71,7 @@ classdef Model3D < handle
                 show(obj.ConvexHulls(i));
                 hold on
             end
+            hold off
             axis equal
         end
 
@@ -77,6 +96,17 @@ classdef Model3D < handle
                              0 0 0 1        ]);
         end
 
+        function moveTo(obj,position)
+            newPose = obj.Pose;
+            switch size(position,1)
+                case 3
+                    newPose(1:3,4) = position;
+                case 1
+                    newPose(1:3,4) = position';
+            end
+            obj.setPose(newPose);
+        end
+
         function rotate(obj,deltaTheta,dim)
             % rotate the object around its barycenter
             switch(dim)
@@ -92,21 +122,31 @@ classdef Model3D < handle
             obj.setPose(newPose);
         end
 
-        function [collisionStatus,minDist] = detectCollision(obj1,obj2)
-            [~,minDist] = checkCollision(obj1.ConvexHulls(1),obj2.ConvexHulls(1));
+        function collisionStatus = detectCollision(obj1,obj2,minDist)
+            % check the collision status between 2 objects
+            % we suppose that obj1 collide with obj2 if they overlap
+            % if input includes the third argument, we suppose that obj1
+            % collide with obj2 if dist(obj1,obj2) < minDist
+            collisionStatus = false;
             for i = 1:length(obj1.ConvexHulls)
-                for j = i:length(obj2.ConvexHulls)
-                    [collisionStatus,spdist] = ...
+                for j = 1:length(obj2.ConvexHulls)
+                    [overlap,dist] = ...
                         checkCollision(obj1.ConvexHulls(i),obj2.ConvexHulls(j));
-                    if collisionStatus
-                        minDist = 0;
+                    if overlap || (nargin == 3 && dist < minDist)
+                        collisionStatus = true;
                         return
-                    end
-                    if spdist < minDist
-                        minDist = spdist;
                     end
                 end
             end
+        end
+
+        function output = isInside(obj,container)
+            output = obj.BoundingBox.minX >= 0 && ...
+                     obj.BoundingBox.minY >= 0 && ...
+                     obj.BoundingBox.minZ >= 0 && ...
+                     obj.BoundingBox.maxX <= container.sizeX && ...
+                     obj.BoundingBox.minX <= container.sizeY && ...
+                     obj.BoundingBox.minX <= container.sizeZ;
         end
 
     end
