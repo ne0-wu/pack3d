@@ -22,4 +22,4 @@ octave-workspace
 .autosave
 
 # Meshes
-meshes/
+meshes/*
