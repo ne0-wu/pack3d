@@ -16,7 +16,7 @@ if isFeasible
     for iModel = models
         for jModel = models
             if isequal(iModel,jModel), continue, end
-            if detectCollision(iModel,jModel)
+            if detectCollision(iModel,jModel,container.minDist)
                 isFeasible = false;
                 break;
             end

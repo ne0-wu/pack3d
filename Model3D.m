@@ -44,9 +44,12 @@ classdef Model3D < handle
             cp.BoundingBox = AABB(cp.Vertices,cp.Pose);
         end
 
-        function ComputeVHACD(obj)
+        function ComputeVHACD(obj,maxConvexHulls)
+            if nargin == 1
+                maxConvexHulls = 16;
+            end
             % compute convex decomposition using C++ V-HACD library
-            [pos,offset] = mexVHACD(obj.Vertices,obj.Triangles - 1);
+            [pos,offset] = mexVHACD(obj.Vertices,obj.Triangles - 1,maxConvexHulls);
             obj.ConvexHulls(1:(size(offset,2) - 1)) = collisionMesh([0 0 0]);
             for i = 1:(size(offset,2) - 1)
                 obj.ConvexHulls(i) = ...
@@ -127,12 +130,15 @@ classdef Model3D < handle
             % we suppose that obj1 collide with obj2 if they overlap
             % if input includes the third argument, we suppose that obj1
             % collide with obj2 if dist(obj1,obj2) < minDist
+            if nargin == 2
+                minDist = 0;
+            end
             collisionStatus = false;
             for i = 1:length(obj1.ConvexHulls)
                 for j = 1:length(obj2.ConvexHulls)
                     [overlap,dist] = ...
                         checkCollision(obj1.ConvexHulls(i),obj2.ConvexHulls(j));
-                    if overlap || (nargin == 3 && dist < minDist)
+                   if overlap || (nargin == 3 && dist < minDist)
                         collisionStatus = true;
                         return
                     end

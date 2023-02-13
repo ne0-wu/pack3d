@@ -3,7 +3,7 @@ clear
 close all
 
 bunny = Model3D('meshes/ob_chair_gothic.obj');
-bunny.ComputeVHACD;
+bunny.ComputeVHACD(20);
 
 m = 3; n = 3; l = 2;
 models(1:(m * n * l)) = Model3D;
@@ -14,7 +14,7 @@ for i = 1:m
             idx = (i - 1) * m * l + (j - 1) * l + k;
             models(idx) = copy(bunny);
             models(idx).moveTo([i j k] * 2);
-            models(idx).draw(fig);
+            models(idx).drawConvexHulls(fig);
             hold on
             drawnow
         end
@@ -24,4 +24,4 @@ axis equal
 
 container = Container(12,10,8,0.2);
 
-% fitnessFunction(models,container)
+fitnessFunction(models,container)

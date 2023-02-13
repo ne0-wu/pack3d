@@ -21,25 +21,34 @@ class MexFunction : public matlab::mex::Function
 public:
 	void operator()(ArgumentList outputs, ArgumentList inputs)
 	{
+        /*
+        * Inputs are point positions (nV * 3 double array),
+        * IDs of triangles' vertices and max number of convex hulls.
+        * Outputs are the generated convex hulls.
+        */
+
 		// Validate arguments
 		checkArguments(outputs, inputs);
 
 		// Translate variables
+
+        // points (inputs[0])
 		uint32_t countPoints = inputs[0].getDimensions()[0];
-		uint32_t countTriangles = inputs[1].getDimensions()[0];
-
 		double* points = new double[countPoints * 3];
-		uint32_t* triangles = new uint32_t[countTriangles * 3];
-
 		for (int i = 0; i < countPoints * 3; i++)
 			points[i] = inputs[0][i / 3][i % 3];
-
+        // triangles (inputs[1])
+		uint32_t countTriangles = inputs[1].getDimensions()[0];
+		uint32_t* triangles = new uint32_t[countTriangles * 3];
 		for (int i = 0; i < countTriangles * 3; i++)
 			triangles[i] = inputs[1][i / 3][i % 3];
+        // maxConvexHulls (inputs[2])
+        uint32_t maxConvexHulls = inputs[2][0];
 
 		// Implement function
-		VHACD::IVHACD* iface = VHACD::CreateVHACD();
-		VHACD::IVHACD::Parameters p;
+        VHACD::IVHACD::Parameters p;
+        p.m_maxConvexHulls = maxConvexHulls;
+        VHACD::IVHACD* iface = VHACD::CreateVHACD();
 		iface->Compute(points, countPoints, triangles, countTriangles, p);
 
 		// Assign outputs
@@ -95,11 +104,11 @@ public:
 		std::shared_ptr<matlab::engine::MATLABEngine> matlabPtr = getEngine();
 
 		// Check number of inputs
-		if (inputs.size() != 2)
+		if (inputs.size() != 3)
 		{
 			matlabPtr->feval(u"error",
 				0,
-				std::vector<matlab::data::Array>({ factory.createScalar("Two inputs required") }));
+				std::vector<matlab::data::Array>({ factory.createScalar("Three inputs required") }));
 		}
 
 		// Check number of outputs
