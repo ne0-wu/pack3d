@@ -1,4 +1,3 @@
-clc
 clear
 close all
 
@@ -22,6 +21,6 @@ for i = 1:m
 end
 axis equal
 
-container = Container(12,10,8,0.2);
+container = Container(12,10,8,0);
 
-fitnessFunction(models,container)
+[fitness,isFeasible] = fitnessFunction(models,container)

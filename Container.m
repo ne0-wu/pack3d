@@ -13,7 +13,11 @@ classdef Container
             obj.sizeX = length;
             obj.sizeY = width;
             obj.sizeZ = height;
-            obj.minDist = dist;
+            if nargin == 3
+                obj.minDist = dist;
+            else
+                obj.minDist = 0;
+            end
         end
 
         function output = volume(obj)
