@@ -11,16 +11,34 @@ classdef AABB
 
     methods
 
-        function obj = AABB(points,pose)
-            if nargin == 2
-                points = [points ones(size(points,1),1)] * pose';
+        function obj = AABB(arg1,arg2,arg3,arg4,arg5,arg6)
+            switch nargin
+                case 1
+                    points = arg1;
+                    obj.minX = min(points(:,1));
+                    obj.maxX = max(points(:,1));
+                    obj.minY = min(points(:,2));
+                    obj.maxY = max(points(:,2));
+                    obj.minZ = min(points(:,3));
+                    obj.maxZ = max(points(:,3));
+                case 2
+                    points = arg1;
+                    pose = arg2;
+                    points = [points ones(size(points,1),1)] * pose';
+                    obj.minX = min(points(:,1));
+                    obj.maxX = max(points(:,1));
+                    obj.minY = min(points(:,2));
+                    obj.maxY = max(points(:,2));
+                    obj.minZ = min(points(:,3));
+                    obj.maxZ = max(points(:,3));
+                case 6
+                    obj.minX = arg1;
+                    obj.maxX = arg2;
+                    obj.minY = arg3;
+                    obj.maxY = arg4;
+                    obj.minZ = arg5;
+                    obj.maxZ = arg6;
             end
-            obj.minX = min(points(:,1));
-            obj.maxX = max(points(:,1));
-            obj.minY = min(points(:,2));
-            obj.maxY = max(points(:,2));
-            obj.minZ = min(points(:,3));
-            obj.maxZ = max(points(:,3));
         end
 
         function obj = add(obj,obj2)

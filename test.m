@@ -1,26 +1,28 @@
 clear
 close all
 
-bunny = Model3D('meshes/ob_chair_gothic.obj');
-bunny.ComputeVHACD(20);
+model = Model3D('meshes/ob_chair_gothic.obj');
+model.ComputeVHACD(8);
 
-m = 3; n = 3; l = 2;
+m = 3; n = 3; l = 1;
 models(1:(m * n * l)) = Model3D;
-fig = figure;
 for i = 1:m
     for j = 1:n
         for k = 1:l
             idx = (i - 1) * m * l + (j - 1) * l + k;
-            models(idx) = copy(bunny);
-            models(idx).moveTo([i j k] * 2);
-            models(idx).drawConvexHulls(fig);
-            hold on
-            drawnow
+            models(idx) = copy(model);
+            models(idx).moveTo([3 3 3]);
         end
     end
 end
-axis equal
 
-container = Container(12,10,8,0);
+container = Container(6,6,6);
 
-[fitness,isFeasible] = fitnessFunction(models,container)
+simulatedAnnealing(models,container);
+
+% fig = figure;
+% for i = 1:length(models)
+%     models(i).drawConvexHulls(fig);
+%     hold on
+%     drawnow
+% end

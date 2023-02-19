@@ -4,13 +4,15 @@ function [fitness,isFeasible] = fitnessFunction(models,container)
 isFeasible = true;
 
 % check if all objects are inside the container
-overallBoundingBox = models(1).BoundingBox;
+allModelsBB = models(1).BoundingBox;
 for i = 2:length(models)
-    overallBoundingBox = overallBoundingBox.add(models(i).BoundingBox);
+    allModelsBB = allModelsBB.add(models(i).BoundingBox);
 end
-if ~overallBoundingBox.isInside(container)
+if ~allModelsBB.isInside(container)
     isFeasible = false;
 end
+
+overallBB = allModelsBB.add(container.aabb);
 
 % for iModel = models
 %     if ~iModel.BoundingBox.isInside(container)
@@ -21,29 +23,28 @@ end
 
 % check if objects collide with each other
 overlapVolume = zeros(length(models));
-if isFeasible
-    for i = 1:length(models)
-        for j = [1:(i-1) (i+1):length(models)]
-            if detectCollision(models(i),models(j),container.minDist)
-                isFeasible = false;
-                [~,overlapVolume(i,j)] = checkOverlap(models(i).BoundingBox,models(j).BoundingBox);
-            end
+for i = 1:length(models)
+    for j = [1:(i-1) (i+1):length(models)]
+        if detectCollision(models(i),models(j),container.minDist)
+            isFeasible = false;
+            [~,overlapVolume(i,j)] = checkOverlap(models(i).BoundingBox,models(j).BoundingBox);
         end
     end
 end
 
 %% calculate the fitness function
-wA = 100;
-wO = 1;
+wA = 1000;
+wO = 100;
 
-maxHeight = overallBoundingBox.maxZ;
-Vpacking = maxHeight * container.sizeX * container.sizeY;
+% maxHeight = allModelsBB.maxZ;
+% Vpacking = maxHeight * container.sizeX * container.sizeY;
+Vpacking = allModelsBB.volume;
 if isFeasible
     fitness = Vpacking;
 else
-    A = overallBoundingBox.volume / container.volume;
+    A = overallBB.volume / container.volume;
     Voverlap = sum(overlapVolume,'all');
-    fitness = wA * (A - 1) + wO * Voverlap + container.volume;
+    fitness = wA * (A - 1) + wO * Voverlap + Vpacking;
 end
 
 end

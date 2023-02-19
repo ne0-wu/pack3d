@@ -7,6 +7,7 @@ classdef Model3D < handle
         Pose = eye(4)   % homogeneous matrix
         ConvexHulls = collisionMesh([0 0 0])    % object is decomposed into convex collision meshes
         BoundingBox     % axis-aligned bounding box
+        Color
     end
     
     methods
@@ -31,6 +32,7 @@ classdef Model3D < handle
             barycenter = mean(obj.Vertices);
             obj.Vertices = obj.Vertices - barycenter;   % move barycenter to 0 to simplify rotation
             obj.BoundingBox = AABB(obj.Vertices);
+            obj.Color = rand(1,3);
         end
 
         function cp = copy(obj)
@@ -62,7 +64,7 @@ classdef Model3D < handle
                 fig = figure;
             end
             v = [obj.Vertices ones(size(obj.Vertices,1),1)] * obj.Pose';
-            trimesh(obj.Triangles,v(:,1),v(:,2),v(:,3));
+            trimesh(obj.Triangles,v(:,1),v(:,2),v(:,3),'EdgeColor',[0 0 0],'FaceColor',obj.Color);
             axis equal
         end
 

@@ -5,6 +5,7 @@ classdef Container
         sizeY
         sizeZ
         minDist
+        aabb
     end
 
     methods
@@ -13,11 +14,12 @@ classdef Container
             obj.sizeX = length;
             obj.sizeY = width;
             obj.sizeZ = height;
-            if nargin == 3
+            if nargin == 4
                 obj.minDist = dist;
             else
                 obj.minDist = 0;
             end
+            obj.aabb = AABB(0,obj.sizeX,0,obj.sizeY,0,obj.sizeZ);
         end
 
         function output = volume(obj)
