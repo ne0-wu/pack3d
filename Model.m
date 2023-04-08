@@ -3,9 +3,17 @@ classdef Model < handle
     properties
         Vertices
         Triangles
-        Pose = eye(4) % homogeneous matrix
-        convexDecomp = collisionMesh([0 0 0]) % object is decomposed into convex collision meshes
-        BoundingBox % axis-aligned bounding box
+
+        % homogeneous matrix
+        Pose = eye(4)
+
+        % object is decomposed into convex collision meshes
+        convexDecomp = collisionMesh([0 0 0])
+
+        % axis-aligned bounding box
+        BoundingBox
+        
+        % (usually random) color, for visualization
         Color
     end
 
@@ -40,7 +48,8 @@ classdef Model < handle
 
         function cp = copy(obj)
             cp = Model(obj.Vertices, obj.Triangles);
-            cp.convexDecomp(1:length(obj.convexDecomp)) = collisionMesh([0 0 0]);
+            cp.convexDecomp(1:length(obj.convexDecomp)) = ... 
+                collisionMesh([0 0 0]); % initialize the array
             for i = 1:length(obj.convexDecomp)
                 cp.convexDecomp(i) = ...
                     collisionMesh(obj.convexDecomp(i).Vertices);
@@ -49,6 +58,7 @@ classdef Model < handle
             cp.BoundingBox = AABB(cp.Vertices, cp.Pose);
         end
 
+        %% convex decomposition with VHACD
         function ComputeVHACD(obj, maxconvexDecomp)
             if nargin == 1
                 maxconvexDecomp = 16;
@@ -64,19 +74,21 @@ classdef Model < handle
             end
         end
 
+        %% draw
+        % draw the mesh
         function fig = draw(obj, fig)
-            if nargin == 1
-                fig = figure;
-            end
+            if nargin == 1, fig = figure; end
+
             v = [obj.Vertices ones(size(obj.Vertices, 1), 1)] * obj.Pose';
-            trimesh(obj.Triangles, v(:, 1), v(:, 2), v(:, 3), 'EdgeColor', [0 0 0], 'FaceColor', obj.Color);
+            trimesh(obj.Triangles, v(:, 1), v(:, 2), v(:, 3), ...
+                'EdgeColor', [0 0 0], 'FaceColor', obj.Color);
             axis equal
         end
 
-        function fig = drawconvexDecomp(obj, fig)
-            if nargin == 1
-                fig = figure;
-            end
+        % draw the convex hulls produced by VHACD
+        function fig = drawConvexDecomp(obj, fig)
+            if nargin == 1, fig = figure;  end
+
             for i = 1:length(obj.convexDecomp)
                 show(obj.convexDecomp(i));
                 hold on
@@ -85,8 +97,14 @@ classdef Model < handle
             axis equal
         end
 
+        %% deal with the pose of the model
+        % get position of the model
+        function pos = position(obj)
+            pos = obj.Pose(1:3, 4)';
+        end
+
+        % set the object's pose, which is a homogeneous matrix
         function setPose(obj, pose)
-            % directly change the object's pose
             obj.Pose = pose;
             for i = 1:length(obj.convexDecomp)
                 obj.convexDecomp(i).Pose = obj.Pose;
@@ -94,39 +112,37 @@ classdef Model < handle
             obj.BoundingBox = AABB(obj.Vertices, obj.Pose);
         end
 
+        % perform an affine transform to the object
         function affineTrsfm(obj, aftMatrix)
-            % perform an affine transform to the object
             obj.setPose(aftMatrix * obj.Pose);
         end
 
+        % move model from x to x+posDiff
         function move(obj, posDiff)
-            % move model from x to x+posDiff
             trslMatrix = eye(4);
             trslMatrix(1:3, 4) = posDiff;
             obj.setPose(trslMatrix * obj.Pose);
         end
 
+        % move model to desired position
         function moveTo(obj, position)
-            % move model to desired position
             newPose = obj.Pose;
-            switch size(position, 1)
-                case 3
-                    newPose(1:3, 4) = position;
-                case 1
-                    newPose(1:3, 4) = position';
-            end
+            newPose(1:3, 4) = position;
+%             switch size(position, 1)
+%                 case 3
+%                     newPose(1:3, 4) = position;
+%                 case 1
+%                     newPose(1:3, 4) = position';
+%             end
             obj.setPose(newPose);
         end
 
+        % rotate the object around its barycenter
         function rotate(obj, deltaTheta, dim)
-            % rotate the object around its barycenter
             switch (dim)
-                case 1
-                    rotm = rotx(deltaTheta);
-                case 2
-                    rotm = roty(deltaTheta);
-                case 3
-                    rotm = rotz(deltaTheta);
+                case 1, rotm = rotx(deltaTheta);
+                case 2, rotm = roty(deltaTheta);
+                case 3, rotm = rotz(deltaTheta);
             end
 
             newPose = obj.Pose;
@@ -134,8 +150,8 @@ classdef Model < handle
             obj.setPose(newPose);
         end
 
+        %% check the collision status between 2 objects
         function collisionStatus = checkModelCollision(obj1, obj2, minDist)
-            % check the collision status between 2 objects
             % we suppose that obj1 collide with obj2 if they overlap
             % if input includes the third argument, we suppose that obj1
             % collide with obj2 if dist(obj1,obj2) < minDist
@@ -144,16 +160,27 @@ classdef Model < handle
             end
 
             collisionStatus = false;
-            for i = 1:length(obj1.convexDecomp)
-                for j = 1:length(obj2.convexDecomp)
+            for ch1 = obj1.convexDecomp
+                for ch2 = obj2.convexDecomp
                     [overlap, dist] = ...
-                        checkCollision(obj1.convexDecomp(i), obj2.convexDecomp(j));
-                    if overlap || (nargin == 3 && dist < minDist)
+                        checkCollision(ch1, ch2);
+                    if overlap || dist < minDist
                         collisionStatus = true;
                         return
                     end
                 end
             end
+%             for i = 1:length(obj1.convexDecomp)
+%                 for j = 1:length(obj2.convexDecomp)
+%                     [overlap, dist] = ...
+%                         checkCollision(obj1.convexDecomp(i), ...
+%                                        obj2.convexDecomp(j));
+%                     if overlap || (nargin == 3 && dist < minDist)
+%                         collisionStatus = true;
+%                         return
+%                     end
+%                 end
+%             end
         end
 
     end

@@ -1,62 +1,13 @@
-classdef WorkingChamber < handle
-
-    properties
-        containerSize % size of the working chamber
-        minDist % minimum distance between models allowed
-        models
-        overlapVolume = zeros(100);
-    end
+classdef PackingSA < Packing
 
     methods
 
-        function obj = WorkingChamber(length, width, height, dist)
-            obj.containerSize = [length width height];
-            if nargin == 4
-                obj.minDist = dist;
-            else
-                obj.minDist = 0;
-            end
+        % just excute this function
+        function pack(obj, maximumSteps)
+            obj.simulatedAnnealing(maximumSteps);
         end
 
-        function output = containerVolume(obj)
-            output = prod(obj.containerSize);
-        end
-
-        function appendModel(obj, models)
-            % append a model into the working chamber
-            numModelsBef = length(obj.models);
-            if isempty(obj.models)
-                obj.models = models;
-            else
-                obj.models = [obj.models, models];
-            end
-            numModelsAft = length(obj.models);
-            obj.update((numModelsBef + 1):numModelsAft);
-        end
-
-        function update(obj, iModified)
-            % update the collision status of models
-            numModels = length(obj.models);
-            if numModels > size(obj.overlapVolume, 1)
-                obj.overlapVolume(numModels, numModels) = 0;    % expand the matrix
-            end
-            if nargin == 1
-                iModified = 1:numModels;
-            end
-            obj.overlapVolume(iModified, :) = 0;
-            obj.overlapVolume(:, iModified) = 0;
-            for i = iModified
-                for j = [1:i-1 i+1:numModels]
-                    if checkModelCollision(obj.models(i), obj.models(j), obj.minDist)
-                        [~, obj.overlapVolume(i, j)] = ...
-                            checkAabbCollision(obj.models(i).BoundingBox, ...
-                                               obj.models(j).BoundingBox);
-                        obj.overlapVolume(j, i) = obj.overlapVolume(i, j);
-                    end
-                end
-            end
-        end
-
+        % fitness function to be optimized
         function [fitness, isFeasible] = fitnessFunc(obj, iModified)
             if nargin == 2
                 obj.update(iModified);
@@ -83,7 +34,7 @@ classdef WorkingChamber < handle
             wA = 1000; wO = 100;
             maxHeight = allModelsBB.maxZ;
             Vpacking = maxHeight * obj.containerSize(1) * obj.containerSize(2);
-%             Vpacking = allModelsBB.volume;
+            % Vpacking = allModelsBB.volume;
             if isFeasible
                 fitness = Vpacking;
             else
@@ -95,7 +46,8 @@ classdef WorkingChamber < handle
                 fitness = wA * (A - 1) + wO * Voverlap + Vpacking;
             end
         end
-        
+
+        % optimize with the simulated annealing algorithm
         function simulatedAnnealing(obj, maximumSteps)
             if nargin == 1
                 maximumSteps = 1e4;
@@ -149,22 +101,6 @@ classdef WorkingChamber < handle
                     obj.overlapVolume = ovTmp;
                 end
             end
-
-        end
-
-        function draw(obj, fig)
-            if nargin == 1
-                fig = figure;
-            end
-            for iModified = 1:length(obj.models)
-                obj.models(iModified).draw(fig);
-                hold on
-            end
-            drawnow
-            ax = zeros([1, 6]);
-            ax([2 4 6]) = obj.containerSize;
-            axis(ax);
-            hold off
         end
 
     end
