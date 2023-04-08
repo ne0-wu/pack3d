@@ -1,60 +1,51 @@
 classdef AABB
 
     properties
-        minX
-        maxX
-        minY
-        maxY
-        minZ
-        maxZ
+        box % [min x, max x, min y, max y, min z, max z]
     end
 
     methods
 
-        function obj = AABB(arg1,arg2,arg3,arg4,arg5,arg6)
-            switch nargin
-                case 1
-                    points = arg1;
-                    obj.minX = min(points(:,1));
-                    obj.maxX = max(points(:,1));
-                    obj.minY = min(points(:,2));
-                    obj.maxY = max(points(:,2));
-                    obj.minZ = min(points(:,3));
-                    obj.maxZ = max(points(:,3));
-                case 2
-                    points = arg1;
+        function obj = AABB(arg1,arg2)
+            obj.box = zeros(1, 6);
+            if nargin == 0
+                return
+            end
+            if size(arg1, 2) == 3    % input is points
+                points = arg1;
+                if nargin == 2  % input contains a pose matrix
                     pose = arg2;
                     points = [points ones(size(points,1),1)] * pose';
-                    obj.minX = min(points(:,1));
-                    obj.maxX = max(points(:,1));
-                    obj.minY = min(points(:,2));
-                    obj.maxY = max(points(:,2));
-                    obj.minZ = min(points(:,3));
-                    obj.maxZ = max(points(:,3));
-                case 6
-                    obj.minX = arg1;
-                    obj.maxX = arg2;
-                    obj.minY = arg3;
-                    obj.maxY = arg4;
-                    obj.minZ = arg5;
-                    obj.maxZ = arg6;
+                end
+                obj.box(1) = min(points(:,1));
+                obj.box(2) = max(points(:,1));
+                obj.box(3) = min(points(:,2));
+                obj.box(4) = max(points(:,2));
+                obj.box(5) = min(points(:,3));
+                obj.box(6) = max(points(:,3));
+            else    % input is [min x, max x, ...]
+                obj.box = arg1;
             end
         end
 
-        function obj = add(obj,obj2)
-            obj.minX = min(obj.minX,obj2.minX);
-            obj.maxX = max(obj.maxX,obj2.maxX);
-            obj.minY = min(obj.minY,obj2.minY);
-            obj.maxY = max(obj.maxY,obj2.maxY);
-            obj.minZ = min(obj.minZ,obj2.minZ);
-            obj.maxZ = max(obj.maxZ,obj2.maxZ);
+        function out = minX(obj), out = obj.box(1); end
+        function out = maxX(obj), out = obj.box(2); end
+        function out = minY(obj), out = obj.box(3); end
+        function out = maxY(obj), out = obj.box(4); end
+        function out = minZ(obj), out = obj.box(5); end
+        function out = maxZ(obj), out = obj.box(6); end
+
+        function obj = aabbUnion(obj1,obj2)
+            obj = AABB;
+            obj.box([1 3 5]) = min(obj1.box([1 3 5]),obj2.box([1 3 5]));
+            obj.box([2 4 6]) = max(obj1.box([2 4 6]),obj2.box([2 4 6]));
         end
 
-        function [overlapStatus,overlapVolume] = checkOverlap(obj1,obj2)
-            overlapStatus = min(obj1.maxX,obj2.maxX) > max(obj1.minX,obj2.minX) && ...
-                            min(obj1.maxY,obj2.maxY) > max(obj1.minY,obj2.minY) && ...
-                            min(obj1.maxZ,obj2.maxZ) > max(obj1.minZ,obj2.minZ);
-            if overlapStatus
+        function [collisionStatus,overlapVolume] = checkAabbCollision(obj1,obj2)
+            collisionStatus = min(obj1.maxX,obj2.maxX) > max(obj1.minX,obj2.minX) && ...
+                              min(obj1.maxY,obj2.maxY) > max(obj1.minY,obj2.minY) && ...
+                              min(obj1.maxZ,obj2.maxZ) > max(obj1.minZ,obj2.minZ);
+            if collisionStatus
                 overlapVolume = (min(obj1.maxX,obj2.maxX) - max(obj1.minX,obj2.minX)) * ...
                                 (min(obj1.maxY,obj2.maxY) - max(obj1.minY,obj2.minY)) * ...
                                 (min(obj1.maxZ,obj2.maxZ) - max(obj1.minZ,obj2.minZ));
@@ -63,13 +54,13 @@ classdef AABB
             end
         end
 
-        function output = isInside(obj,container)
+        function output = isInside(obj, containerSize)
             output = obj.minX >= 0 && ...
                      obj.minY >= 0 && ...
                      obj.minZ >= 0 && ...
-                     obj.maxX <= container.sizeX && ...
-                     obj.maxY <= container.sizeY && ...
-                     obj.maxZ <= container.sizeZ;
+                     obj.maxX <= containerSize(1) && ...
+                     obj.maxY <= containerSize(2) && ...
+                     obj.maxZ <= containerSize(3);
         end
 
         function output = volume(obj)
@@ -78,7 +69,7 @@ classdef AABB
                      (obj.maxZ - obj.minZ);
         end
 
-        function output = sizeLWH(obj)
+        function output = boxSize(obj)
             % length, width and height
             output = [obj.maxX - obj.minX ...
                       obj.maxY - obj.minY ...
@@ -86,13 +77,13 @@ classdef AABB
         end
 
         function draw(obj)
-            colsnbox = collisionBox(obj.maxX - obj.minX, ...
+            clsnbox = collisionBox(obj.maxX - obj.minX, ...
                 obj.maxY - obj.minY,obj.maxZ - obj.minZ);
-            colsnbox.Pose = [1 0 0 (obj.minX + obj.maxX) / 2; ...
+            clsnbox.Pose = [1 0 0 (obj.minX + obj.maxX) / 2; ...
                              0 1 0 (obj.minY + obj.maxY) / 2; ...
                              0 0 1 (obj.minY + obj.maxZ) / 2; ...
                              0 0 0 1                        ];
-            show(colsnbox);
+            show(clsnbox);
         end
 
     end

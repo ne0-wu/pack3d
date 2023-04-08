@@ -6,13 +6,13 @@ isFeasible = true;
 % check if all objects are inside the container
 allModelsBB = models(1).BoundingBox;
 for i = 2:length(models)
-    allModelsBB = allModelsBB.add(models(i).BoundingBox);
+    allModelsBB = allModelsBB.aabbUnion(models(i).BoundingBox);
 end
 if ~allModelsBB.isInside(container)
     isFeasible = false;
 end
 
-overallBB = allModelsBB.add(container.aabb);
+overallBB = allModelsBB.aabbUnion(container.aabb);
 
 % for iModel = models
 %     if ~iModel.BoundingBox.isInside(container)
