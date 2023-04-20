@@ -2,7 +2,7 @@
 
 ## 如何运行
 
-在 MATLAB 中打开工作区, 编译 mex 函数
+在 MATLAB 中打开这个文件夹, 编译 mex 函数
 
 ```
 mex mexVHACD/mexVHACD.cpp
