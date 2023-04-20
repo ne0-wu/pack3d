@@ -20,6 +20,7 @@ classdef Model < handle
     methods
 
         function obj = Model(arg1, arg2)
+            % input -> vertices and triangles
             switch nargin
                 case 0  % no input
                     obj.Vertices = [0 0 0;
@@ -37,23 +38,34 @@ classdef Model < handle
                     obj.Triangles = arg2;
             end
             
-            % obj.ComputeVHACD(8);   % comvex decomposition
+            % comvex decomposition (do it manually instead)
+            % obj.ComputeVHACD(8);
 
             % move barycenter to 0 for rotation
             barycenter = mean(obj.Vertices);
             obj.Vertices = obj.Vertices - barycenter; 
+
+            % generate bounding box
             obj.BoundingBox = AABB(obj.Vertices);
-            obj.Color = rand(1, 3); % random color by default
+
+            % random color for rendering by default
+            obj.Color = rand(1, 3);
         end
 
+        %% copy constructor
         function cp = copy(obj)
+            % construct v and t
             cp = Model(obj.Vertices, obj.Triangles);
+
+            % assign the collisionMeshes
             cp.convexDecomp(1:length(obj.convexDecomp)) = ... 
                 collisionMesh([0 0 0]); % initialize the array
             for i = 1:length(obj.convexDecomp)
                 cp.convexDecomp(i) = ...
                     collisionMesh(obj.convexDecomp(i).Vertices);
             end
+
+            % set pose and generate bounding box
             cp.setPose(obj.Pose)
             cp.BoundingBox = AABB(cp.Vertices, cp.Pose);
         end
@@ -128,12 +140,6 @@ classdef Model < handle
         function moveTo(obj, position)
             newPose = obj.Pose;
             newPose(1:3, 4) = position;
-%             switch size(position, 1)
-%                 case 3
-%                     newPose(1:3, 4) = position;
-%                 case 1
-%                     newPose(1:3, 4) = position';
-%             end
             obj.setPose(newPose);
         end
 
@@ -150,6 +156,13 @@ classdef Model < handle
             obj.setPose(newPose);
         end
 
+        % set orientation
+        function setOrientation(obj, rotMatrix)
+            newPose = obj.Pose;
+            newPose(1:3, 1:3) = rotMatrix;
+            obj.setPose(newPose);
+        end
+
         %% check the collision status between 2 objects
         function collisionStatus = checkModelCollision(obj1, obj2, minDist)
             % we suppose that obj1 collide with obj2 if they overlap
@@ -159,28 +172,36 @@ classdef Model < handle
                 minDist = 0;
             end
 
+            % check if the bounding boxes overlap
+            [~, ~, aabbDist] = checkAabbOverlap(obj1.BoundingBox, obj2.BoundingBox);
+            if aabbDist > minDist
+                collisionStatus = false;
+                return
+            end
+
+            % check if the objects overlap
             collisionStatus = false;
             for ch1 = obj1.convexDecomp
                 for ch2 = obj2.convexDecomp
-                    [overlap, dist] = ...
-                        checkCollision(ch1, ch2);
+                    [overlap, dist] = checkCollision(ch1, ch2);
                     if overlap || dist < minDist
                         collisionStatus = true;
                         return
                     end
                 end
             end
-%             for i = 1:length(obj1.convexDecomp)
-%                 for j = 1:length(obj2.convexDecomp)
-%                     [overlap, dist] = ...
-%                         checkCollision(obj1.convexDecomp(i), ...
-%                                        obj2.convexDecomp(j));
-%                     if overlap || (nargin == 3 && dist < minDist)
-%                         collisionStatus = true;
-%                         return
-%                     end
-%                 end
-%             end
+
+            % parallel version
+            % numCh1 = length(obj1.convexDecomp);
+            % numCh2 = length(obj2.convexDecomp);
+            % parfor i = 1:numCh1*numCh2
+            %     j = floor((i - 1) / numCh2) + 1;
+            %     k = mod(i - 1, numCh2) + 1;
+            %     [overlap, dist] = checkCollision(obj1.convexDecomp(j), obj2.convexDecomp(k));
+            %     if overlap || dist < minDist
+            %         collisionStatus = true;
+            %     end
+            % end
         end
 
     end

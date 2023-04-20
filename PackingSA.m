@@ -23,7 +23,7 @@ classdef PackingSA < Packing
             end
             % check if all objects are inside the container
             allModelsBB = obj.models(1).BoundingBox;
-            for i = 2:length(obj.models)
+            for i = 2:obj.numModels()
                 allModelsBB = allModelsBB.aabbUnion(obj.models(i).BoundingBox);
             end
             if ~allModelsBB.isInside(obj.containerSize)
@@ -34,7 +34,6 @@ classdef PackingSA < Packing
             wA = 1000; wO = 100;
             maxHeight = allModelsBB.maxZ;
             Vpacking = maxHeight * obj.containerSize(1) * obj.containerSize(2);
-            % Vpacking = allModelsBB.volume;
             if isFeasible
                 fitness = Vpacking;
             else
@@ -60,7 +59,7 @@ classdef PackingSA < Packing
             alpha = 0.999; % cooling rate
         
             probabilityMove = 0.8;
-            rotAng = 90;
+            rotAng = 360 / obj.k;
         
             fOld = obj.fitnessFunc();
         
@@ -68,7 +67,7 @@ classdef PackingSA < Packing
             while tmpt > tmptEnd && stepCount < maximumSteps
                 stepCount = stepCount + 1;
                 %% generate a new solution
-                iModified = randi(length(obj.models)); % the object to make a small change
+                iModified = randi(obj.numModels()); % the object to make a small change
                 modelTmp = copy(obj.models(iModified)); % backup this object in case of it need to be recovered
                 ovTmp = obj.overlapVolume;
                 modelTmp.Color = obj.models(iModified).Color;

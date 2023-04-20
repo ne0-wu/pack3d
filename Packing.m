@@ -13,25 +13,28 @@ classdef Packing < handle
         % intermediate variables to be saved
         overlapVolume = zeros(100);
         insideContainer = zeros(100, 1);
+
+        % rotation is limited to multiples of 2pi/k
+        k
     end
 
     methods
 
-        function obj = Packing(length, width, height, dist)
+        function obj = Packing(length, width, height, dist, kk)
             obj.containerSize = [length width height];
-            if nargin == 3
+            if nargin < 4
                 obj.minDist = 0.1;
             else
-                obj.minDist = max(dist, 0.1);
+                obj.minDist = dist;
+            end
+            if nargin < 5
+                obj.k = 4;
+            else
+                obj.k = kk;
             end
         end
 
-        % volume of the container
-        function output = containerVolume(obj)
-            output = prod(obj.containerSize);
-        end
-
-        % append some models
+        %% append some models
         function appendModel(obj, models)
             numModelsBef = length(obj.models);
             if isempty(obj.models)
@@ -43,6 +46,18 @@ classdef Packing < handle
             obj.update((numModelsBef + 1):numModelsAft);
         end
 
+        %% utils
+        % num of models
+        function num = numModels(obj)
+            num = length(obj.models);
+        end
+
+        % volume of the container
+        function volume = containerVolume(obj)
+            volume = prod(obj.containerSize);
+        end
+
+        % max height of all models
         function height = maxHeight(obj)
             height = obj.models(1).BoundingBox.maxZ();
             for i = 2:length(obj.models)
@@ -50,6 +65,12 @@ classdef Packing < handle
             end
         end
 
+        % packing volume
+        function volume = packingVolume(obj)
+            volume = obj.maxHeight() * obj.containerSize(1) * obj.containerSize(2);
+        end
+
+        %% collision detection
         % update the collision status of models
         function collisionStatus = checkCollisionIJ(obj, i, j)
             if i == j
@@ -103,6 +124,17 @@ classdef Packing < handle
             end
         end
         
+        %% set orientation of models (for bottom-left)
+        function setOrientation(obj, orientation)
+            for i = 1:obj.numModels()
+                rot = rotx(orientation(1, i, 1) * 360 / obj.k) ...
+                    * roty(orientation(1, i, 2) * 360 / obj.k) ...
+                    * rotz(orientation(1, i, 3) * 360 / obj.k);
+                obj.models(i).setOrientation(rot);
+            end
+        end
+
+        %% draw
         % draw all the models
         function draw(obj, fig)
             if nargin == 1
