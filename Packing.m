@@ -149,7 +149,10 @@ classdef Packing < handle
             % set the axes
             ax = zeros([1, 6]);
             ax([2 4 6]) = obj.containerSize;
+            ax(6) = min(obj.maxHeight, ax(6));
             axis(ax);
+
+            light
 
             hold off
             drawnow

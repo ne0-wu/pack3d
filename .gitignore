@@ -22,4 +22,4 @@ octave-workspace
 .autosave
 
 # png
-.png
+*.png

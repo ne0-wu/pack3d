@@ -9,7 +9,9 @@ classdef PackingGeneticBL < PackingBL
         fitnessList
 
         % history
-        history
+        historyBest
+        historyAvg
+        historyTime
 
         % figure
         fig
@@ -64,18 +66,20 @@ classdef PackingGeneticBL < PackingBL
         function geneticAlgorithm(obj, maximumSteps, populationSize)
             % initialize
             obj.initialize(populationSize);
-            numSurvived = floor(obj.populationSize() / 3);
-            numChildren = floor(obj.populationSize() / 3);
-            numGenerated = obj.populationSize() - numSurvived - numChildren;
+            numSurvived = floor(obj.populationSize() / 4);
+            numChildren = floor(obj.populationSize() / 2);
+            numNew = obj.populationSize() - numSurvived - numChildren;
 
             obj.fitnessList = zeros(obj.populationSize(), 1);
 
-            obj.history = zeros(maximumSteps, 1);
+            obj.historyBest = zeros(maximumSteps, 1);
+            obj.historyAvg  = zeros(maximumSteps, 1);
+            obj.historyTime = zeros(maximumSteps, 1);
             obj.fig = figure;
 
             stepCount = 0;
             while stepCount < maximumSteps
-                tic
+                tic;
 
                 stepCount = stepCount + 1;
                 
@@ -88,22 +92,30 @@ classdef PackingGeneticBL < PackingBL
                     PackingGeneticBL.breed(obj.population(obj.indexSurvived, :, :), numChildren);
 
                 % generate
-                obj.population(indexDied(numChildren + (1:numGenerated)), :, :) = ...
-                    PackingGeneticBL.generatePopulation(obj.numModels(), obj.k, numGenerated);
+                obj.population(indexDied(numChildren + (1:numNew)), :, :) = ...
+                    PackingGeneticBL.generatePopulation(obj.numModels(), obj.k, numNew);
 
-                obj.history(stepCount) = obj.fitnessList(obj.indexSurvived(1));
+                durationTime = toc;
+
+                obj.historyBest(stepCount) = obj.fitnessList(obj.indexSurvived(1));
+                obj.historyAvg(stepCount) = mean(obj.fitnessList);
+                obj.historyTime(stepCount) = durationTime;
 
                 % disp
-                disp({stepCount, obj.fitnessList(obj.indexSurvived(1))})
-                toc
-
+                disp({stepCount, obj.historyBest(stepCount), mean(obj.fitnessList), durationTime})
+                
                 % draw current best
                 indexBest = obj.indexSurvived(1);
                 obj.bottomLeft(obj.packingSequence(indexBest), obj.orientation(indexBest));
                 obj.draw(obj.fig);
 
-                zlim([0 5])
                 drawnow
+
+                if stepCount > 10
+                    if abs(obj.historyBest(stepCount) - obj.historyBest(stepCount - 10)) < 1e-3
+                        break
+                    end
+                end
             end
         end
 

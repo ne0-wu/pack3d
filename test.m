@@ -1,13 +1,23 @@
-clear
-close all
+% clear
+% close all
 
-chair = Model('meshes/ob_chair_gothic.obj');
-chair.ComputeVHACD(6);
+% clear packing models
+% 
+% chair = Model('meshes/chair.obj');
+% chair.ComputeVHACD(5);
 
-models(1:10) = Model();
-for i = 1:length(models)
-    models(i) = copy(chair);
-end
+% casterSwivel = Model('meshes/caster-swivel.obj');
+% casterSwivel.Vertices = casterSwivel.Vertices / 15;
+% casterSwivel.ComputeVHACD(6);
+
+% chair.drawConvexDecomp
+
+% N = 20;
+% 
+% models(1:N) = Model();
+% for i = 1:N, models(i) = copy(chair); end
+
+% for i = 11:15, models(i) = copy(casterSwivel); end
 
 % m = 3; n = 3; l = 1;
 % models(1:(m * n * l)) = Model;
@@ -25,20 +35,26 @@ end
 % wc.appendModel(models);
 % wc.pack(2e4);
 
-% packing = PackingBL(3, 3, 3, 0.1);
-% packing.appendModel(models);
-% 
-% for i = 2:2:length(models)
-%     packing.models(i).rotate(180, 3);
-% end
-% 
-% for i = 17:20
-%     packing.models(i).rotate(90, 3);
-% end
-
-packing = PackingGeneticBL(2, 2, 8, 0.1);
+% optimal
+packing = PackingBL(3, 3, 3, 0.1);
 packing.appendModel(models);
 
-disp('packing start')
+for i = 2:2:length(models)
+    packing.models(i).rotate(180, 3);
+end
 
-packing.pack(50, 50);
+for i = 17:20
+    packing.models(i).rotate(90, 3);
+end
+
+orientation = zeros(1, packing.numModels, 3);
+orientation(1, 2:2:length(models), 3) = 2;
+orientation(1, 17:20, 3) = orientation(1, 17:20, 3) + 1;
+% packing.bottomLeft(1:packing.numModels, orientation)
+packing.fitnessFunc(1:20, orientation)
+
+%% genetic
+% packing = PackingGeneticBL(3, 3, 8, 0.1);
+% packing.appendModel(models);
+% 
+% packing.pack(50, 30);

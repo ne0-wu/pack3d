@@ -6,8 +6,8 @@ classdef PackingBL < Packing
         function pack(obj)
             obj.bottomLeft();
         end
-
-        % make the model fall into a specific direction
+        
+        %% make the model fall into a specific direction
         % (to fall means to move and stop until collision happens)
         function error = fall(obj, iModel, direction, maxDistance, fig)
             for i = iModel
@@ -21,7 +21,8 @@ classdef PackingBL < Packing
                 initPos = obj.models(i).position();
                 direction = direction / norm(direction);
                 distNear = 0; distFar = maxDistance;
-                while abs(distFar - distNear) > obj.minDist / 3
+                distBest = 0;
+                while abs(distFar - distNear) > obj.minDist / 2
                     distMid = (distNear + distFar) / 2;
 
                     obj.models(i).moveTo(initPos + direction * distMid);
@@ -47,7 +48,7 @@ classdef PackingBL < Packing
             error = false;
         end
 
-        % bottom-left method
+        %% bottom-left-front method
         function error = bottomLeft(obj, packingSequence, orientation, fig)
             % default packing sequence
             if nargin < 2
@@ -63,12 +64,22 @@ classdef PackingBL < Packing
                 obj.models(i).moveTo(obj.containerSize * 100);
             end
 
-            % bottom-left
+            % bottom-left-front
+            % blfPoint = [0 0 0];
             for i = packingSequence
-                upperRightFarPoint = obj.models(i).BoundingBox.box([2 4 6]);
-                initPos = obj.models(i).position() + obj.containerSize - upperRightFarPoint ...
+                ModelUpperRightFarPoint = obj.models(i).BoundingBox.box([2 4 6]);
+                initPos = obj.models(i).position() + obj.containerSize - ModelUpperRightFarPoint ...
                     - obj.minDist / 3;
 
+                % obj.models(i).moveTo(blfPoint + obj.models(i).BoundingBox.boxSize() / 2 + obj.minDist);
+                % obj.update(i);
+                % bNoCollision = sum(obj.overlapVolume(i, :), 'all') == 0;
+                % bIsInside = obj.insideContainer(i);
+                % if ~(bNoCollision && bIsInside)
+                %     obj.models(i).moveTo(initPos);
+                %     obj.update(i);
+                % end
+                
                 obj.models(i).moveTo(initPos);
                 obj.update(i);
 
@@ -97,13 +108,17 @@ classdef PackingBL < Packing
                     error = obj.fall(i, [-1 0 0], obj.models(i).BoundingBox.minX, fig);
                     if error, return; end
                 end
+
+                % blfPoint = obj.models(i).position() + [1 -0.95 -1] .* obj.models(i).BoundingBox.boxSize() / 2;
             end
         end
 
-        % fitness function
+        %% fitness function
         % (total packing volume of the reuslt of BL method using given packing sequence and orientation)
-        function fitness = fitnessFunc(obj, packingSequence, orientation, fig)
-            obj.bottomLeft(packingSequence, orientation);
+        function fitness = fitnessFunc(obj, packingSequence, orientation)
+            if nargin > 1
+                obj.bottomLeft(packingSequence, orientation);
+            end
             fitness = obj.packingVolume();
         end
 

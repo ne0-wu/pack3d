@@ -93,7 +93,7 @@ classdef Model < handle
 
             v = [obj.Vertices ones(size(obj.Vertices, 1), 1)] * obj.Pose';
             trimesh(obj.Triangles, v(:, 1), v(:, 2), v(:, 3), ...
-                'EdgeColor', [0 0 0], 'FaceColor', obj.Color);
+                'EdgeColor', obj.Color, 'FaceColor', obj.Color);
             axis equal
         end
 
